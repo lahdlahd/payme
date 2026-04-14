@@ -12,8 +12,13 @@ app.use(express.json());
 
 app.get('/debts', async (req, res) => {
     try {
+        const address = req.query.address;
         const debts = await storage.getDebts();
-        res.json(debts);
+        if (address) {
+            res.json(debts.filter(d => d.creditorAddress && d.creditorAddress.toLowerCase() === address.toLowerCase()));
+        } else {
+            res.json(debts);
+        }
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -21,11 +26,11 @@ app.get('/debts', async (req, res) => {
 
 app.post('/debts', async (req, res) => {
     try {
-        const { name, amount } = req.body;
-        if (!name || amount === undefined) {
-            return res.status(400).json({ error: "Missing name or amount" });
+        const { name, amount, creditorAddress, txHash } = req.body;
+        if (!name || amount === undefined || !creditorAddress) {
+            return res.status(400).json({ error: "Missing name, amount, or creditorAddress" });
         }
-        const newDebt = await agent.addDebt(name, amount);
+        const newDebt = await agent.addDebt(name, amount, creditorAddress, txHash);
         res.json(newDebt);
     } catch (err) {
         res.status(500).json({ error: err.message });

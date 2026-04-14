@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Activity, Plus } from "lucide-react";
+import { Activity, Plus, Wallet } from "lucide-react";
+import { ethers } from "ethers";
 import DashboardStats from "@/components/DashboardStats";
 import DebtCard, { Debt } from "@/components/DebtCard";
 import ChatBox from "@/components/ChatBox";
@@ -12,12 +13,14 @@ const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
 
 export default function Home() {
   const [debts, setDebts] = useState<Debt[]>([]);
+  const [account, setAccount] = useState<string>("");
   const [isAddModalOpen, setAddModalOpen] = useState(false);
   const [selectedPaymentDebt, setSelectedPaymentDebt] = useState<Debt | null>(null);
 
   const fetchDebts = async () => {
     try {
-      const res = await fetch(`${API_BASE}/debts`, {
+      const q = account ? `?address=${account}` : '';
+      const res = await fetch(`${API_BASE}/debts${q}`, {
         headers: { "ngrok-skip-browser-warning": "true" }
       });
       if (res.ok) {
@@ -35,7 +38,7 @@ export default function Home() {
     // Setting up polling for autonomous updates if backend marks it paid
     const timer = setInterval(fetchDebts, 15000);
     return () => clearInterval(timer);
-  }, []);
+  }, [account]);
 
   const totalOwed = debts.filter(d => d.status === 'pending').reduce((sum, d) => sum + d.amount, 0);
   const totalRecovered = debts.filter(d => d.status === 'paid').reduce((sum, d) => sum + d.amount, 0);
@@ -43,11 +46,34 @@ export default function Home() {
 
   // Actions
   const handleAddDebt = async (name: string, amount: number) => {
+    if (!account) {
+      alert("Please Connect Wallet first to log this debt on X Layer!");
+      return;
+    }
+
     try {
+      let txHash = "";
+      
+      // TRIGGER X LAYER TRANSACTION via METAMASK
+      try {
+        const provider = new ethers.BrowserProvider((window as any).ethereum);
+        const signer = await provider.getSigner();
+        const tx = await signer.sendTransaction({
+          to: account, // Sending 0 OKB locally to ourselves to embed the debt log!
+          value: 0,
+          data: ethers.hexlify(ethers.toUtf8Bytes(`Debt Log via PayMeBack: LENT ${name} $${amount}`))
+        });
+        txHash = tx.hash;
+      } catch (err) {
+        console.error("Wallet transaction rejected", err);
+        alert("Transaction rejected! We must record the debt on-chain.");
+        return;
+      }
+
       const res = await fetch(`${API_BASE}/debts`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
-        body: JSON.stringify({ name, amount })
+        body: JSON.stringify({ name, amount, creditorAddress: account, txHash })
       });
       if (!res.ok) {
         throw new Error("Backend response not OK");
@@ -55,7 +81,7 @@ export default function Home() {
       fetchDebts();
     } catch (e) {
       console.error(e);
-      alert("Error: Could not connect to the Backend! Make sure your tunnel is running and NEXT_PUBLIC_BACKEND_URL is updated locally or on Vercel.");
+      alert("Error: Could not connect to the Backend! Make sure your tunnel is running and NEXT_PUBLIC_BACKEND_URL is updated.");
     }
   };
 
@@ -99,9 +125,26 @@ export default function Home() {
             Agent Active
           </div>
           <div className="w-[1px] h-4 bg-zinc-600"></div>
-          <div className="text-xs font-mono text-zinc-300">
-            0xac09...f80
-          </div>
+          {account ? (
+            <div className="text-xs font-mono text-[var(--accent-green)] border border-[var(--accent-green)] px-3 py-1 rounded-full cursor-pointer hover:bg-[var(--accent-green)] hover:text-black transition-colors" onClick={() => setAccount("")}>
+              {account.substring(0, 6)}...{account.substring(account.length - 4)}
+            </div>
+          ) : (
+            <button 
+              onClick={async () => {
+                if ((window as any).ethereum) {
+                  try {
+                    const provider = new ethers.BrowserProvider((window as any).ethereum);
+                    const accounts = await provider.send("eth_requestAccounts", []);
+                    setAccount(accounts[0]);
+                  } catch (e) { console.error(e); }
+                } else { alert("MetaMask not found! Please install the extension."); }
+              }}
+              className="text-xs font-bold text-black bg-[var(--accent-green)] hover:bg-[var(--accent-green-hover)] px-4 py-1.5 flex items-center rounded-full transition-colors shadow-lg shadow-green-500/20"
+            >
+              <Wallet className="w-3.5 h-3.5 mr-1.5" /> Connect Wallet
+            </button>
+          )}
         </div>
       </header>
 

@@ -6,17 +6,19 @@ const { getBalance, getAgentWalletAddress } = require('./blockchain');
  * 1. addDebt(name, amount)
  * saves debt into local storage, assigns unique ID, sets status = "pending"
  */
-async function addDebt(name, amount) {
+async function addDebt(name, amount, creditorAddress, txHash) {
     const debt = {
         id: crypto.randomUUID(),
         name,
         amount: parseFloat(amount),
-        walletAddress: getAgentWalletAddress(),
+        walletAddress: creditorAddress, // Payment should go directly to the creditor now!
+        creditorAddress: creditorAddress.toLowerCase(),
+        txHash: txHash || null,
         status: "pending",
         createdAt: Date.now()
     };
     await saveDebt(debt);
-    console.log(`[AGENT] Added new debt for ${name} amount ${amount}. ID: ${debt.id}`);
+    console.log(`[AGENT] Added new debt for ${name} amount ${amount} mapped to ${creditorAddress}. TxHash: ${txHash}`);
     return debt;
 }
 

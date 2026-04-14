@@ -7,6 +7,8 @@ export type Debt = {
   status: 'pending' | 'paid';
   createdAt: number;
   walletAddress: string;
+  creditorAddress?: string;
+  txHash?: string;
 };
 
 type DebtCardProps = {
@@ -28,6 +30,11 @@ export default function DebtCard({ debt, onSendReminder, onViewPayment }: DebtCa
         <div>
           <h3 className="font-semibold text-lg">{debt.name}</h3>
           <div className="text-zinc-400 text-sm">{dateStr}</div>
+          {debt.txHash && (
+            <a href={`https://www.okx.com/explorer/xlayer/tx/${debt.txHash}`} target="_blank" rel="noreferrer" className="text-xs text-[var(--accent-green)] hover:underline mt-1 block">
+              Tx: {debt.txHash.substring(0,8)}...{debt.txHash.substring(debt.txHash.length-6)}
+            </a>
+          )}
         </div>
       </div>
 
