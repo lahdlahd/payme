@@ -1,4 +1,4 @@
-import { Bell, QrCode } from "lucide-react";
+import { QrCode } from "lucide-react";
 
 export type Debt = {
   id: string;
@@ -13,11 +13,10 @@ export type Debt = {
 
 type DebtCardProps = {
   debt: Debt;
-  onSendReminder: (id: string) => void;
   onViewPayment: (debt: Debt) => void;
 };
 
-export default function DebtCard({ debt, onSendReminder, onViewPayment }: DebtCardProps) {
+export default function DebtCard({ debt, onViewPayment }: DebtCardProps) {
   const isPaid = debt.status === 'paid';
   const dateStr = new Date(debt.createdAt).toLocaleDateString();
 
@@ -47,15 +46,7 @@ export default function DebtCard({ debt, onSendReminder, onViewPayment }: DebtCa
         </div>
         
         <div className="flex gap-2 w-full md:w-auto">
-          {!isPaid && (
-            <button 
-              onClick={() => onSendReminder(debt.id)}
-              className="flex-1 md:flex-none flex items-center justify-center px-4 py-2 bg-[#27272a] hover:bg-[#3f3f46] transition-colors rounded-lg text-sm font-medium"
-            >
-              <Bell className="w-4 h-4 mr-2" />
-              Reminder
-            </button>
-          )}
+
           <button 
             onClick={() => onViewPayment(debt)}
             className="flex-1 md:flex-none flex items-center justify-center px-4 py-2 bg-[var(--accent-green)] hover:bg-[var(--accent-green-hover)] text-black transition-colors rounded-lg text-sm font-medium"

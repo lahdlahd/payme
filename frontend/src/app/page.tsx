@@ -138,17 +138,6 @@ export default function Home() {
     }
   };
 
-  const handleSendReminder = async (id: string) => {
-    alert("On-chain/backend reminder triggered (Gentle or Urgent will be processed by Agent)!");
-    // For MVP demo, hitting reminder endpoint
-    try {
-      await fetch(`${API_BASE}/reminder`, { 
-        method: "POST",
-        headers: { "ngrok-skip-browser-warning": "true" }
-      });
-    } catch(e) {}
-  };
-
   const handleSimulatePayment = async (id: string) => {
     try {
       await fetch(`${API_BASE}/simulate-payment`, {
@@ -235,7 +224,6 @@ export default function Home() {
                 <DebtCard 
                   key={debt.id} 
                   debt={debt} 
-                  onSendReminder={handleSendReminder} 
                   onViewPayment={(d) => setSelectedPaymentDebt(d)} 
                 />
               ))}
