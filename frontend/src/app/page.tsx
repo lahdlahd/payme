@@ -17,7 +17,9 @@ export default function Home() {
 
   const fetchDebts = async () => {
     try {
-      const res = await fetch(`${API_BASE}/debts`);
+      const res = await fetch(`${API_BASE}/debts`, {
+        headers: { "ngrok-skip-browser-warning": "true" }
+      });
       if (res.ok) {
         const data = await res.json();
         const sorted = data.sort((a: Debt, b: Debt) => b.createdAt - a.createdAt);
@@ -44,7 +46,7 @@ export default function Home() {
     try {
       const res = await fetch(`${API_BASE}/debts`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
         body: JSON.stringify({ name, amount })
       });
       if (!res.ok) {
@@ -61,7 +63,10 @@ export default function Home() {
     alert("On-chain/backend reminder triggered (Gentle or Urgent will be processed by Agent)!");
     // For MVP demo, hitting reminder endpoint
     try {
-      await fetch(`${API_BASE}/reminder`, { method: "POST" });
+      await fetch(`${API_BASE}/reminder`, { 
+        method: "POST",
+        headers: { "ngrok-skip-browser-warning": "true" }
+      });
     } catch(e) {}
   };
 
@@ -69,7 +74,7 @@ export default function Home() {
     try {
       await fetch(`${API_BASE}/simulate-payment`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
         body: JSON.stringify({ id })
       });
       setSelectedPaymentDebt(null);
