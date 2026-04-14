@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Activity, Plus, Wallet } from "lucide-react";
+import { Activity, Plus, Wallet, LogOut } from "lucide-react";
 import { ethers } from "ethers";
 import DashboardStats from "@/components/DashboardStats";
 import DebtCard, { Debt } from "@/components/DebtCard";
@@ -18,9 +18,12 @@ export default function Home() {
   const [selectedPaymentDebt, setSelectedPaymentDebt] = useState<Debt | null>(null);
 
   const fetchDebts = async () => {
+    if (!account) {
+      setDebts([]);
+      return;
+    }
     try {
-      const q = account ? `?address=${account}` : '';
-      const res = await fetch(`${API_BASE}/debts${q}`, {
+      const res = await fetch(`${API_BASE}/debts?address=${account}`, {
         headers: { "ngrok-skip-browser-warning": "true" }
       });
       if (res.ok) {
@@ -33,9 +36,23 @@ export default function Home() {
     }
   };
 
+  // Check quietly on load
+  useEffect(() => {
+    const checkWallet = async () => {
+      if ((window as any).ethereum) {
+        try {
+          const provider = new ethers.BrowserProvider((window as any).ethereum);
+          const accounts = await provider.send("eth_accounts", []);
+          if (accounts.length > 0) setAccount(accounts[0]);
+        } catch (e) {}
+      }
+    };
+    checkWallet();
+  }, []);
+
+  // Sync data when account changes
   useEffect(() => {
     fetchDebts();
-    // Setting up polling for autonomous updates if backend marks it paid
     const timer = setInterval(fetchDebts, 15000);
     return () => clearInterval(timer);
   }, [account]);
@@ -126,14 +143,24 @@ export default function Home() {
           </div>
           <div className="w-[1px] h-4 bg-zinc-600"></div>
           {account ? (
-            <div className="text-xs font-mono text-[var(--accent-green)] border border-[var(--accent-green)] px-3 py-1 rounded-full cursor-pointer hover:bg-[var(--accent-green)] hover:text-black transition-colors" onClick={() => setAccount("")}>
-              {account.substring(0, 6)}...{account.substring(account.length - 4)}
+            <div className="flex items-center gap-3">
+              <div className="text-xs font-mono text-[var(--accent-green)] border border-[var(--accent-green)] px-3 py-1.5 rounded-full bg-green-500/10">
+                {account.substring(0, 6)}...{account.substring(account.length - 4)}
+              </div>
+              <button onClick={() => setAccount("")} className="text-zinc-400 hover:text-white transition-colors" title="Disconnect">
+                <LogOut className="w-4 h-4" />
+              </button>
             </div>
           ) : (
             <button 
               onClick={async () => {
                 if ((window as any).ethereum) {
                   try {
+                    // Force permission prompt so they can switch accounts!
+                    await (window as any).ethereum.request({
+                      method: "wallet_requestPermissions",
+                      params: [{ eth_accounts: {} }]
+                    });
                     const provider = new ethers.BrowserProvider((window as any).ethereum);
                     const accounts = await provider.send("eth_requestAccounts", []);
                     setAccount(accounts[0]);
