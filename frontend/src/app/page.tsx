@@ -42,14 +42,18 @@ export default function Home() {
   // Actions
   const handleAddDebt = async (name: string, amount: number) => {
     try {
-      await fetch(`${API_BASE}/debts`, {
+      const res = await fetch(`${API_BASE}/debts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, amount })
       });
+      if (!res.ok) {
+        throw new Error("Backend response not OK");
+      }
       fetchDebts();
     } catch (e) {
       console.error(e);
+      alert("Error: Could not connect to the Backend! Make sure your tunnel is running and NEXT_PUBLIC_BACKEND_URL is updated locally or on Vercel.");
     }
   };
 
