@@ -8,6 +8,7 @@ import DebtCard, { Debt } from "@/components/DebtCard";
 import ChatBox from "@/components/ChatBox";
 import AddDebtModal from "@/components/AddDebtModal";
 import PaymentModal from "@/components/PaymentModal";
+import ReminderModal from "@/components/ReminderModal";
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
 
@@ -16,6 +17,7 @@ export default function Home() {
   const [account, setAccount] = useState<string>("");
   const [isAddModalOpen, setAddModalOpen] = useState(false);
   const [selectedPaymentDebt, setSelectedPaymentDebt] = useState<Debt | null>(null);
+  const [reminderDebt, setReminderDebt] = useState<Debt | null>(null);
 
   const fetchDebts = async () => {
     if (!account) {
@@ -138,6 +140,21 @@ export default function Home() {
     }
   };
 
+  const handleSendReminder = async (id: string, email: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/reminders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
+        body: JSON.stringify({ id, email })
+      });
+      if (!res.ok) throw new Error("Failed to dispatch autonomous email");
+      alert(`Agent Dispatched! A formal debt collection request was sent to ${email}.`);
+    } catch(e) {
+      console.error(e);
+      alert("Agent failed to dispatch the email. Check your backend logs.");
+    }
+  };
+
   const handleSimulatePayment = async (id: string) => {
     try {
       await fetch(`${API_BASE}/simulate-payment`, {
@@ -224,6 +241,7 @@ export default function Home() {
                 <DebtCard 
                   key={debt.id} 
                   debt={debt} 
+                  onSendReminder={(d) => setReminderDebt(d)}
                   onViewPayment={(d) => setSelectedPaymentDebt(d)} 
                 />
               ))}
@@ -257,6 +275,13 @@ export default function Home() {
         debt={selectedPaymentDebt} 
         onClose={() => setSelectedPaymentDebt(null)} 
         onSimulate={handleSimulatePayment} 
+      />
+
+      <ReminderModal 
+        isOpen={reminderDebt !== null}
+        debt={reminderDebt}
+        onClose={() => setReminderDebt(null)}
+        onSend={handleSendReminder}
       />
 
     </main>

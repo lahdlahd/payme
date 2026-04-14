@@ -1,6 +1,10 @@
 const crypto = require('crypto');
-const { saveDebt, updateDebt, findUnpaidDebts } = require('./storage');
+const { saveDebt, updateDebt, findUnpaidDebts, getDebts } = require('./storage');
 const { getBalance, getAgentWalletAddress } = require('./blockchain');
+const { Resend } = require('resend');
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
 
 /**
  * 1. addDebt(name, amount)
@@ -98,9 +102,54 @@ async function reminderEngine() {
     }
 }
 
+async function sendEmailReminder(debtId, debtorEmail) {
+    const debts = await getDebts();
+    const debt = debts.find(d => d.id === debtId);
+    if (!debt) throw new Error("Debt not found");
+
+    if (!process.env.RESEND_API_KEY) {
+        console.warn("\x1b[33m[AGENT] RESEND_API_KEY not configured! Simulating autonomous email drop to:\x1b[0m", debtorEmail);
+        return { simulated: true };
+    }
+
+    try {
+        const { data, error } = await resend.emails.send({
+            from: 'Pay Me Back Agent <onboarding@resend.dev>',
+            to: debtorEmail,
+            subject: `URGENT: Outstanding Balance of $${debt.amount} for ${debt.name}`,
+            html: `
+            <div style="font-family: sans-serif; background: #000; color: #fff; padding: 40px; border-radius: 10px;">
+                <h1 style="color: #22c55e;">Pay Me Back Agent</h1>
+                <p style="font-size: 16px;">Hello. This is an automated debt collection notice dispatched from X Layer.</p>
+                <div style="background: #18181b; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <h2 style="font-weight: normal">Outstanding Balance: <span style="font-weight: bold; color: #ef4444;">$${debt.amount}</span></h2>
+                    <p style="color: #a1a1aa"><strong>Creditor Wallet:</strong> ${debt.creditorAddress}</p>
+                </div>
+                <p>Please connect your wallet to the OKX X Layer network and settle this balance directly to the creditor's wallet immediately to avoid further autonomous reminders.</p>
+                <br/>
+                <a href="https://www.okx.com/explorer/xlayer/tx/${debt.txHash || ''}" style="color: #22c55e;">View Blockchain Proof</a>
+            </div>
+            `
+        });
+
+        if (error) {
+            console.error("[AGENT] Resend rejected the transmission:", error);
+            throw new Error(error.message);
+        }
+
+        console.log(`[AGENT] Email securely dispatched to ${debtorEmail}`);
+        return data;
+
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
+}
+
 module.exports = {
     addDebt,
     generatePaymentRequest,
     checkPayments,
-    reminderEngine
+    reminderEngine,
+    sendEmailReminder
 };
