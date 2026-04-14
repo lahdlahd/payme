@@ -35,16 +35,22 @@ export default function ChatBox({ onAddDebt, onRefresh }: ChatBoxProps) {
       const lower = userMsg.text.toLowerCase();
       let responseText = "I didn't quite catch that. Try 'I lent Name $Amount' or 'check'.";
 
-      if (lower.includes("lent") || lower.includes("gave")) {
-        // Regex to find a name and amount, e.g., "lent John 20" or "lent John $20"
-        const match = userMsg.text.match(/(?:lent|gave)\s+([A-Za-z]+).*?\$?(\d+(?:\.\d+)?)/i);
-        if (match) {
-          const name = match[1];
-          const amount = parseFloat(match[2]);
-          onAddDebt(name, amount);
-          responseText = `Got it! I added a debt of $${amount} for ${name}. Track it on the dashboard.`;
+      if (lower.includes("lent") || lower.includes("gave") || lower.includes("owes") || lower.includes("to")) {
+        // Highly flexible NLP heuristic parser
+        const amountMatch = userMsg.text.match(/\$?\b(\d+(?:\.\d+)?)\b/);
+        const wordsOriginal = userMsg.text.split(/[^a-zA-Z]+/);
+        const stopWords = ['i','lent','gave','to','dollars','bucks','for','a','an','the','he','she','it','they','them','him','her','me','my','you','your','we','our','us','is','was','are','were','and','or','but','if','because','so','of','at','by','from','in','on','that','this','with','owes','borrowed','bot','agent','please','can'];
+        const nameCandidate = wordsOriginal.find(w => w.length >= 2 && !stopWords.includes(w.toLowerCase()));
+
+        if (amountMatch && nameCandidate) {
+          const amount = parseFloat(amountMatch[1]);
+          const rawName = nameCandidate;
+          const formattedName = rawName.charAt(0).toUpperCase() + rawName.slice(1).toLowerCase();
+          
+          onAddDebt(formattedName, amount);
+          responseText = `Got it! I'm creating a debt log of $${amount} for ${formattedName}. Track it on the dashboard and sign the X Layer transaction!`;
         } else {
-          responseText = "I saw you want to log a debt, but I couldn't read the name or amount. Use format: 'I lent John $20'.";
+          responseText = "I saw you want to log a debt, but I couldn't read the exact name or amount. Try 'I lent John 20' or '40 to Sarah'.";
         }
       } else if (lower.includes("list") || lower.includes("debts")) {
         onRefresh();
