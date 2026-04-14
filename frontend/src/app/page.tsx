@@ -71,9 +71,45 @@ export default function Home() {
     try {
       let txHash = "";
       
-      // TRIGGER X LAYER TRANSACTION via METAMASK
+      // TRIGGER X LAYER TRANSACTION via METAMASK/RABBY
       try {
         const provider = new ethers.BrowserProvider((window as any).ethereum);
+
+        // ENFORCE X LAYER MAINNET (Chain ID: 196 / 0xc4)
+        const targetChainId = '0xc4';
+        try {
+          await (window as any).ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: targetChainId }],
+          });
+        } catch (switchError: any) {
+          // If the chain hasn't been added to their wallet yet, auto-add it!
+          if (switchError.code === 4902) {
+            try {
+              await (window as any).ethereum.request({
+                method: 'wallet_addEthereumChain',
+                params: [
+                  {
+                    chainId: targetChainId,
+                    chainName: 'X Layer Mainnet',
+                    nativeCurrency: { name: 'OKB', symbol: 'OKB', decimals: 18 },
+                    rpcUrls: ['https://rpc.xlayer.tech'],
+                    blockExplorerUrls: ['https://www.okx.com/explorer/xlayer/'],
+                  },
+                ],
+              });
+            } catch (addError) {
+              console.error(addError);
+              alert("Could not automatically add X Layer to your wallet.");
+              return;
+            }
+          } else {
+            console.error(switchError);
+            alert("You must switch to X Layer to record this debt!");
+            return;
+          }
+        }
+
         const signer = await provider.getSigner();
         const tx = await signer.sendTransaction({
           to: account, // Sending 0 OKB locally to ourselves to embed the debt log!
